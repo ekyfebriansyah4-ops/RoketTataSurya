@@ -66,7 +66,7 @@ public class MenuJeda : MonoBehaviour
     void KeMenu()
     {
         Time.timeScale = 1f;
-        SceneManager.LoadScene("MainMenu");
+        Transisi.Muat("MainMenu");
     }
 
     void OnDestroy()

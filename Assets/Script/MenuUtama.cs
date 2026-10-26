@@ -156,7 +156,7 @@ public class MenuUtama : MonoBehaviour
     // ====== Aksi tombol ======
     void Mulai()
     {
-        SceneManager.LoadScene("Gameplay");
+        Transisi.Muat("Gameplay");
     }
 
     void Keluar()
