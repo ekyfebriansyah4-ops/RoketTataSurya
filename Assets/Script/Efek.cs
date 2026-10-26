@@ -29,7 +29,7 @@ public class Efek : MonoBehaviour
         klipMeteor = BuatDentuman();
 
         matPecahan = BuatMaterial(new Color32(130, 120, 110, 255));
-        matPercikan = BuatMaterial(new Color32(239, 140, 39, 255));
+        matPercikan = Visual.Bercahaya(new Color32(239, 140, 39, 255), 4f);
     }
 
     // ====== Dipanggil dari script lain ======

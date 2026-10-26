@@ -264,6 +264,7 @@ public class GameManager : MonoBehaviour
         piringan.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
         piringan.transform.localScale = new Vector3(1.6f, 0.03f, 1.6f);
         piringan.GetComponent<Renderer>().sharedMaterial = materialCincin;
+                  Visual.TambahTepiBercahaya(cincin.transform);
 
         GameObject teks = new GameObject("Teks");
         teks.transform.SetParent(cincin.transform, false);
@@ -579,7 +580,7 @@ public class GameManager : MonoBehaviour
         if (materialCincin != null) return;
         Shader shader = Shader.Find("Universal Render Pipeline/Lit");
         materialCincin = new Material(shader);
-        materialCincin.SetColor("_BaseColor", new Color32(15, 110, 86, 255));
+        materialCincin.SetColor("_BaseColor", new Color32(10, 40, 45, 255));
     }
 
     void CariTeksOtomatis()

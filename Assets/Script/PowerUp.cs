@@ -51,8 +51,8 @@ public class PengaturPowerUp : MonoBehaviour
         sumber.playOnAwake = false;
         klipAmbil = BuatNadaNaik();
 
-        matPerisai = BuatMaterial(new Color32(55, 138, 221, 255));
-        matNyawa = BuatMaterial(new Color32(226, 75, 74, 255));
+        matPerisai = Visual.Bercahaya(new Color32(55, 138, 221, 255), 2.5f);
+        matNyawa = Visual.Bercahaya(new Color32(226, 75, 74, 255), 2.5f);
     }
 
     void Start()

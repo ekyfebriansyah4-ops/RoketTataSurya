@@ -2,12 +2,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-// Mengatur latar luar angkasa: bintang, planet latar, dan meteor.
+// Latar luar angkasa realistis: nebula, bintang berpendar, planet bertekstur, dan asteroid.
 // Dibuat otomatis di scene Gameplay dan MainMenu.
 public class LuarAngkasa : MonoBehaviour
 {
     [Header("Bintang")]
-    public int jumlahBintang = 200;
+    public int jumlahBintang = 300;
     public float kecepatanBintang = 20f;
 
     [Header("Meteor")]
@@ -20,7 +20,7 @@ public class LuarAngkasa : MonoBehaviour
     public Vector3 posisiPlanet = new Vector3(14f, 6f, 120f);
     public float ukuranPlanet = 30f;
 
-    // Warna planet sesuai urutan zona: Merkurius sampai Neptunus
+    // Warna khas tiap planet (dipakai juga oleh UI)
     static readonly Color32[] warnaPlanet =
     {
         new Color32(180, 178, 169, 255), // Merkurius
@@ -39,8 +39,10 @@ public class LuarAngkasa : MonoBehaviour
     }
 
     readonly List<Transform> bintang = new List<Transform>();
-    Material matBintang, matMeteor, matPlanet;
+    Material[] matBintang;
+    Material matMeteor, matPlanet;
     Transform planet;
+    GameObject cincinSaturnus;
     float timerMeteor;
     int zonaTerakhir = -1;
 
@@ -61,20 +63,26 @@ public class LuarAngkasa : MonoBehaviour
     static void BuatJikaPerlu(Scene scene)
     {
         if ((scene.name == "Gameplay" || scene.name == "MainMenu") && FindAnyObjectByType<LuarAngkasa>() == null)
-        {
             new GameObject("LuarAngkasa").AddComponent<LuarAngkasa>();
-        }
     }
 
     // ====== Siklus ======
     void Start()
     {
-        matBintang = BuatMaterial(Color.white);
-        matMeteor = BuatMaterial(new Color32(110, 100, 90, 255));
-        matPlanet = BuatMaterial(warnaPlanet[0]);
+        matBintang = new[]
+        {
+            Visual.Bercahaya(new Color(1f, 1f, 1f), 2.5f),
+            Visual.Bercahaya(new Color(0.75f, 0.85f, 1f), 3f),  // kebiruan
+            Visual.Bercahaya(new Color(1f, 0.9f, 0.75f), 2f),   // kekuningan
+        };
+        matMeteor = Visual.Lit(Color.white, 0f, 0.15f, Visual.TeksturBatu());
+        matPlanet = Visual.Lit(Color.white, 0f, 0.25f, Visual.TeksturPlanet(0));
 
+        BuatNebula();
         BuatBintang();
         BuatPlanet();
+        BuatCincinSaturnus();
+        PerbaruiPlanet();
         timerMeteor = 4f;
     }
 
@@ -100,12 +108,24 @@ public class LuarAngkasa : MonoBehaviour
             }
         }
 
-        // Planet berputar pelan dan warnanya mengikuti zona
+        // Planet berotasi pelan dan teksturnya mengikuti zona
         if (planet != null)
         {
-            planet.Rotate(0f, 5f * Time.deltaTime, 0f);
-            PerbaruiWarnaPlanet();
+            planet.Rotate(Vector3.up, 4f * Time.deltaTime, Space.Self);
+            PerbaruiPlanet();
         }
+    }
+
+    // ====== Nebula (latar jauh) ======
+    void BuatNebula()
+    {
+        GameObject q = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        q.name = "Nebula";
+        Destroy(q.GetComponent<Collider>());
+        q.transform.SetParent(transform, false);
+        q.transform.position = new Vector3(0f, 0f, 160f);
+        q.transform.localScale = new Vector3(420f, 236f, 1f);
+        q.GetComponent<Renderer>().sharedMaterial = Visual.Bercahaya(Color.white, 1f, Visual.TeksturNebula());
     }
 
     // ====== Bintang ======
@@ -117,9 +137,9 @@ public class LuarAngkasa : MonoBehaviour
             s.name = "Bintang";
             Destroy(s.GetComponent<Collider>());
             s.transform.SetParent(transform, false);
-            s.transform.localScale = Vector3.one * Random.Range(0.04f, 0.1f);
+            s.transform.localScale = Vector3.one * Random.Range(0.03f, 0.09f);
             s.transform.position = PosisiBintangAcak(Random.Range(0f, 80f));
-            s.GetComponent<Renderer>().sharedMaterial = matBintang;
+            s.GetComponent<Renderer>().sharedMaterial = matBintang[Random.Range(0, matBintang.Length)];
             bintang.Add(s.transform);
         }
     }
@@ -137,44 +157,51 @@ public class LuarAngkasa : MonoBehaviour
         Destroy(p.GetComponent<Collider>());
         p.transform.SetParent(transform, false);
         p.transform.position = posisiPlanet;
+        p.transform.rotation = Quaternion.Euler(0f, 0f, -15f); // sumbu sedikit miring
         p.transform.localScale = Vector3.one * ukuranPlanet;
         p.GetComponent<Renderer>().sharedMaterial = matPlanet;
         planet = p.transform;
     }
 
-    void PerbaruiWarnaPlanet()
+    void BuatCincinSaturnus()
     {
-        if (GameManager.Instance == null) return;
-        int z = Mathf.Clamp(GameManager.Instance.zonaSekarang, 0, warnaPlanet.Length - 1);
-        if (z == zonaTerakhir) return;
-        zonaTerakhir = z;
-        matPlanet.SetColor("_BaseColor", warnaPlanet[z]);
+        cincinSaturnus = new GameObject("CincinSaturnus");
+        cincinSaturnus.transform.SetParent(transform, false);
+        cincinSaturnus.transform.position = posisiPlanet;
+        cincinSaturnus.transform.rotation = Quaternion.Euler(70f, 0f, -15f);
+        cincinSaturnus.transform.localScale = Vector3.one * ukuranPlanet;
+        cincinSaturnus.AddComponent<MeshFilter>().sharedMesh = Visual.MeshCincin(0.65f, 1.2f, 96);
+        cincinSaturnus.AddComponent<MeshRenderer>().sharedMaterial =
+            Visual.Lit(Color.white, 0f, 0.3f, Visual.TeksturCincinSaturnus());
+        cincinSaturnus.SetActive(false);
     }
 
-    // ====== Meteor ======
+    void PerbaruiPlanet()
+    {
+        int z = GameManager.Instance != null ? Mathf.Clamp(GameManager.Instance.zonaSekarang, 0, 7) : 0;
+        if (z == zonaTerakhir) return;
+        zonaTerakhir = z;
+        matPlanet.SetTexture("_BaseMap", Visual.TeksturPlanet(z));
+        if (cincinSaturnus != null) cincinSaturnus.SetActive(z == 5);
+    }
+
+    // ====== Meteor (asteroid) ======
     void BuatMeteor()
     {
-        GameObject m = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        m.name = "Meteor";
+        GameObject m = new GameObject("Meteor");
         m.transform.position = new Vector3(Random.Range(-3f, 3f), Random.Range(-1.8f, 1.8f), jarakMunculMeteor);
+        m.transform.rotation = Random.rotation;
+        m.transform.localScale = Vector3.one * Random.Range(0.6f, 1f);
 
-        float s = Random.Range(0.5f, 0.9f);
-        m.transform.localScale = new Vector3(s, s * Random.Range(0.7f, 1f), s * Random.Range(0.8f, 1.1f));
-        m.GetComponent<Renderer>().sharedMaterial = matMeteor;
+        m.AddComponent<MeshFilter>().sharedMesh = Visual.MeshAsteroid(Random.Range(0, 6));
+        m.AddComponent<MeshRenderer>().sharedMaterial = matMeteor;
 
-        SphereCollider col = m.GetComponent<SphereCollider>();
+        SphereCollider col = m.AddComponent<SphereCollider>();
         col.isTrigger = true;
         col.radius = 0.4f;
 
         Meteor mt = m.AddComponent<Meteor>();
         mt.kecepatan = kecepatanMeteor * Pengaturan.PengaliKecepatan;
-    }
-
-    Material BuatMaterial(Color warna)
-    {
-        Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-        mat.SetColor("_BaseColor", warna);
-        return mat;
     }
 }
 
@@ -186,7 +213,7 @@ public class Meteor : MonoBehaviour
 
     void Start()
     {
-        putaran = Random.insideUnitSphere * 120f;
+        putaran = Random.insideUnitSphere * 90f;
     }
 
     void Update()
