@@ -60,6 +60,7 @@ public class GameManager : MonoBehaviour
     public int nyawa = 3;
     public int skor = 0;
     public int zonaSekarang = 0;
+    public float lamaKebal = 1.5f;
 
     [Header("Bank soal per planet")]
     public Zona[] zona =
@@ -119,7 +120,15 @@ public class GameManager : MonoBehaviour
     bool selesai;
     float waktuSelesai;
     float kecepatanAktif;
+    float kebalSampai;
     Coroutine pesanCo;
+
+    // UI progres dan banner
+    RectTransform isiProgres;
+    RectTransform penandaRoket;
+    float progresTampil;
+    TextMeshProUGUI teksBanner;
+    Coroutine bannerCo;
 
     // ====== Membuat GameManager otomatis saat scene Gameplay dimuat ======
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -147,9 +156,11 @@ public class GameManager : MonoBehaviour
     void Awake()
     {
         Instance = this;
+        nyawa = Pengaturan.NyawaAwal;
         CariTeksOtomatis();
         AturTampilanUI();
         SiapkanMaterialCincin();
+        BuatProgresDanBanner();
     }
 
     void Start()
@@ -164,12 +175,15 @@ public class GameManager : MonoBehaviour
         teksSoal.text = "";
         teksPesan.text = "";
         PerbaruiUI();
+        TampilkanBanner("Memasuki zona " + zona[0].namaPlanet, 0);
         TampilkanPesan("Arahkan roket ke cincin jawaban yang benar!", 2.5f);
-        StartCoroutine(MunculkanSoal(2f, null));
+        StartCoroutine(MunculkanSoal(2.5f, null));
     }
 
     void Update()
     {
+        PerbaruiProgres();
+
         // Setelah game selesai, ketuk layar untuk kembali ke menu
         if (selesai)
         {
@@ -198,8 +212,8 @@ public class GameManager : MonoBehaviour
         yield return new WaitForSeconds(jeda);
         if (selesai) yield break;
 
-        // Makin jauh planetnya, makin cepat cincin datang
-        kecepatanAktif = kecepatanCincin + zonaSekarang * tambahanKecepatanPerZona;
+        // Makin jauh planetnya makin cepat, dikali pengali tingkat kesulitan
+        kecepatanAktif = (kecepatanCincin + zonaSekarang * tambahanKecepatanPerZona) * Pengaturan.PengaliKecepatan;
 
         Zona z = zona[zonaSekarang];
         soalAktif = ulangi ?? z.daftarSoal[Random.Range(0, z.daftarSoal.Length)];
@@ -224,12 +238,10 @@ public class GameManager : MonoBehaviour
 
     void BuatCincin(string jawaban, bool benar, Vector2 posisi)
     {
-        // Wadah cincin
         GameObject cincin = new GameObject("Cincin_" + jawaban);
         cincin.transform.SetParent(gelombang, false);
         cincin.transform.localPosition = new Vector3(posisi.x, posisi.y, 0f);
 
-        // Piringan (Cylinder yang dipipihkan)
         GameObject piringan = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         Destroy(piringan.GetComponent<Collider>());
         piringan.transform.SetParent(cincin.transform, false);
@@ -237,7 +249,6 @@ public class GameManager : MonoBehaviour
         piringan.transform.localScale = new Vector3(1.6f, 0.03f, 1.6f);
         piringan.GetComponent<Renderer>().sharedMaterial = materialCincin;
 
-        // Teks jawaban 3D
         GameObject teks = new GameObject("Teks");
         teks.transform.SetParent(cincin.transform, false);
         teks.transform.localPosition = new Vector3(0f, 0f, -0.1f);
@@ -250,7 +261,6 @@ public class GameManager : MonoBehaviour
         tmp.fontSizeMax = 4f;
         tmp.rectTransform.sizeDelta = new Vector2(1.5f, 1f);
 
-        // Trigger untuk mendeteksi roket
         BoxCollider col = cincin.AddComponent<BoxCollider>();
         col.isTrigger = true;
         col.size = new Vector3(1.4f, 1.4f, 0.8f);
@@ -276,6 +286,7 @@ public class GameManager : MonoBehaviour
             }
             Efek.SuaraBenar();
             TampilkanPesan("Benar! " + soalAktif.fakta, 3f);
+            TampilkanBanner("Memasuki zona " + zona[zonaSekarang].namaPlanet, zonaSekarang);
         }
         else
         {
@@ -297,9 +308,11 @@ public class GameManager : MonoBehaviour
     // Dipanggil oleh meteor
     public void KenaMeteor()
     {
-        if (selesai) return;
+        if (selesai || Time.time < kebalSampai) return; // sedang kebal
+        kebalSampai = Time.time + lamaKebal;
+
         nyawa--;
-        Efek.KenaMeteor();
+        Efek.KenaMeteor(lamaKebal);
         PerbaruiUI();
         if (nyawa <= 0) { Selesai(false); return; }
         TampilkanPesan("Tertabrak meteor!", 1.2f);
@@ -313,10 +326,10 @@ public class GameManager : MonoBehaviour
         HapusGelombang();
         PerbaruiUI();
         teksSoal.text = "";
+        if (teksBanner != null) teksBanner.alpha = 0f;
 
         if (menang) Efek.SuaraMenang();
 
-        // Simpan skor tertinggi di perangkat
         int tertinggi = PlayerPrefs.GetInt(KunciSkorTertinggi, 0);
         bool rekorBaru = skor > tertinggi;
         if (rekorBaru)
@@ -334,7 +347,8 @@ public class GameManager : MonoBehaviour
     void PerbaruiUI()
     {
         int z = Mathf.Min(zonaSekarang, zona.Length - 1);
-        teksZona.text = "Zona " + (z + 1) + "/" + zona.Length + ": " + zona[z].namaPlanet;
+        teksZona.text = "Zona " + (z + 1) + "/" + zona.Length + ": " + zona[z].namaPlanet
+            + "  (" + Pengaturan.NamaTingkat + ")";
         teksSkor.text = "Skor: " + skor + "   Nyawa: " + Mathf.Max(nyawa, 0);
     }
 
@@ -368,8 +382,110 @@ public class GameManager : MonoBehaviour
 #endif
     }
 
-    // ====== Pengaturan otomatis ======
+    // ====== Bar progres perjalanan dan banner zona ======
+    void BuatProgresDanBanner()
+    {
+        Canvas canvas = teksSoal != null ? teksSoal.canvas : FindAnyObjectByType<Canvas>();
+        if (canvas == null) return;
+        Transform root = canvas.transform;
 
+        // Latar bar
+        RectTransform latar = BuatGambar(root, "BarProgres", new Color(1f, 1f, 1f, 0.15f), null);
+        latar.anchorMin = new Vector2(0.5f, 0f);
+        latar.anchorMax = new Vector2(0.5f, 0f);
+        latar.pivot = new Vector2(0.5f, 0f);
+        latar.anchoredPosition = new Vector2(0, 28);
+        latar.sizeDelta = new Vector2(1200, 14);
+
+        // Isi bar (melebar sesuai progres)
+        isiProgres = BuatGambar(latar, "Isi", MenuUtama.Oranye, null);
+        isiProgres.anchorMin = Vector2.zero;
+        isiProgres.anchorMax = new Vector2(0f, 1f);
+        isiProgres.offsetMin = Vector2.zero;
+        isiProgres.offsetMax = Vector2.zero;
+
+        // Titik untuk tiap planet
+        for (int i = 0; i < zona.Length; i++)
+        {
+            RectTransform titik = BuatGambar(latar, "Titik_" + zona[i].namaPlanet,
+                LuarAngkasa.WarnaPlanet(i), MenuUtama.SpriteLingkaran());
+            float x = (i + 1f) / zona.Length;
+            titik.anchorMin = new Vector2(x, 0.5f);
+            titik.anchorMax = new Vector2(x, 0.5f);
+            titik.pivot = new Vector2(0.5f, 0.5f);
+            titik.anchoredPosition = Vector2.zero;
+            titik.sizeDelta = new Vector2(22, 22);
+        }
+
+        // Penanda posisi roket
+        penandaRoket = BuatGambar(latar, "PenandaRoket", Color.white, MenuUtama.SpriteLingkaran());
+        penandaRoket.anchorMin = new Vector2(0f, 0.5f);
+        penandaRoket.anchorMax = new Vector2(0f, 0.5f);
+        penandaRoket.pivot = new Vector2(0.5f, 0.5f);
+        penandaRoket.anchoredPosition = Vector2.zero;
+        penandaRoket.sizeDelta = new Vector2(30, 30);
+
+        // Label ujung bar
+        TextMeshProUGUI kiri = MenuUtama.BuatTeks(latar, "Matahari", 24, new Vector2(0f, 0.5f),
+            new Vector2(-15, 0), new Vector2(200, 40), MenuUtama.Kuning);
+        kiri.rectTransform.pivot = new Vector2(1f, 0.5f);
+        kiri.alignment = TextAlignmentOptions.Right;
+
+        TextMeshProUGUI kanan = MenuUtama.BuatTeks(latar, "Neptunus", 24, new Vector2(1f, 0.5f),
+            new Vector2(15, 0), new Vector2(200, 40), new Color32(133, 183, 235, 255));
+        kanan.rectTransform.pivot = new Vector2(0f, 0.5f);
+        kanan.alignment = TextAlignmentOptions.Left;
+
+        // Banner besar di tengah layar
+        teksBanner = MenuUtama.BuatTeks(root, "", 72, new Vector2(0.5f, 0.5f), new Vector2(0, 120),
+            new Vector2(1600, 120), Color.white);
+        teksBanner.alpha = 0f;
+    }
+
+    RectTransform BuatGambar(Transform parent, string nama, Color warna, Sprite sprite)
+    {
+        GameObject g = new GameObject(nama, typeof(RectTransform));
+        g.transform.SetParent(parent, false);
+        Image img = g.AddComponent<Image>();
+        img.color = warna;
+        img.sprite = sprite;
+        img.raycastTarget = false;
+        return (RectTransform)g.transform;
+    }
+
+    void PerbaruiProgres()
+    {
+        if (isiProgres == null) return;
+        float target = (float)zonaSekarang / zona.Length;
+        progresTampil = Mathf.MoveTowards(progresTampil, target, Time.deltaTime * 0.25f);
+        isiProgres.anchorMax = new Vector2(progresTampil, 1f);
+        penandaRoket.anchorMin = new Vector2(progresTampil, 0.5f);
+        penandaRoket.anchorMax = new Vector2(progresTampil, 0.5f);
+    }
+
+    void TampilkanBanner(string isi, int indexZona)
+    {
+        if (teksBanner == null) return;
+        if (bannerCo != null) StopCoroutine(bannerCo);
+        teksBanner.color = LuarAngkasa.WarnaPlanet(indexZona);
+        bannerCo = StartCoroutine(AnimasiBanner(isi));
+    }
+
+    IEnumerator AnimasiBanner(string isi)
+    {
+        teksBanner.text = isi;
+        float durasi = 2.2f;
+        float t = 0f;
+        while (t < durasi)
+        {
+            t += Time.deltaTime;
+            teksBanner.alpha = t < 0.3f ? t / 0.3f : Mathf.Clamp01((durasi - t) / 0.7f);
+            yield return null;
+        }
+        teksBanner.alpha = 0f;
+    }
+
+    // ====== Pengaturan otomatis ======
     void SiapkanMaterialCincin()
     {
         if (materialCincin != null) return;
@@ -407,10 +523,9 @@ public class GameManager : MonoBehaviour
             scaler.matchWidthOrHeight = 0.5f;
         }
 
-        // teks, anchor, posisi, ukuran, font, alignment, warna
         AturTeks(teksSoal, new Vector2(0.5f, 1f), new Vector2(0, -90), new Vector2(1400, 120),
             48, TextAlignmentOptions.Center, Color.white);
-        AturTeks(teksZona, new Vector2(0f, 1f), new Vector2(30, -20), new Vector2(700, 60),
+        AturTeks(teksZona, new Vector2(0f, 1f), new Vector2(30, -20), new Vector2(800, 60),
             34, TextAlignmentOptions.TopLeft, Color.white);
         AturTeks(teksSkor, new Vector2(1f, 1f), new Vector2(-30, -20), new Vector2(600, 60),
             34, TextAlignmentOptions.TopRight, Color.white);

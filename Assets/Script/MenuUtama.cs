@@ -118,6 +118,30 @@ public class MenuUtama : MonoBehaviour
             () => panelCaraBermain.SetActive(true));
         BuatTombol(root, "Keluar", Tengah, new Vector2(0, -320), ukuranTombol, Biru, TeksBiruMuda, Keluar);
 
+        
+        // Tombol pilihan tingkat kesulitan (berputar: Mudah -> Normal -> Sulit)
+        Vector2 ukuranPengaturan = new Vector2(320, 70);
+        Button tombolKesulitan = BuatTombol(root, "Kesulitan: " + Pengaturan.NamaTingkat, Tengah,
+            new Vector2(-170, -410), ukuranPengaturan, Biru, TeksBiruMuda, () => { });
+        TextMeshProUGUI labelKesulitan = tombolKesulitan.GetComponentInChildren<TextMeshProUGUI>();
+        labelKesulitan.fontSize = 30;
+        tombolKesulitan.onClick.AddListener(() =>
+        {
+            Pengaturan.Tingkat = (Kesulitan)(((int)Pengaturan.Tingkat + 1) % 3);
+            labelKesulitan.text = "Kesulitan: " + Pengaturan.NamaTingkat;
+        });
+
+        // Tombol suara aktif/mati
+        Button tombolSuara = BuatTombol(root, "Suara: " + (Pengaturan.SuaraAktif ? "Aktif" : "Mati"), Tengah,
+            new Vector2(170, -410), ukuranPengaturan, Biru, TeksBiruMuda, () => { });
+        TextMeshProUGUI labelSuara = tombolSuara.GetComponentInChildren<TextMeshProUGUI>();
+        labelSuara.fontSize = 30;
+        tombolSuara.onClick.AddListener(() =>
+        {
+            Pengaturan.SuaraAktif = !Pengaturan.SuaraAktif;
+            labelSuara.text = "Suara: " + (Pengaturan.SuaraAktif ? "Aktif" : "Mati");
+        });
+
         BuatTeks(root, "Kelompok 6 - Pemrograman Mobile Lanjut", 24, Bawah, new Vector2(0, 30),
             new Vector2(1200, 50), new Color32(136, 135, 128, 255));
 

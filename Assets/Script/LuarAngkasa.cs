@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 // Mengatur latar luar angkasa: bintang, planet latar, dan meteor.
-// Dibuat otomatis saat scene Gameplay dimulai.
+// Dibuat otomatis di scene Gameplay dan MainMenu.
 public class LuarAngkasa : MonoBehaviour
 {
     [Header("Bintang")]
@@ -33,13 +33,18 @@ public class LuarAngkasa : MonoBehaviour
         new Color32(24, 95, 165, 255),   // Neptunus
     };
 
+    public static Color32 WarnaPlanet(int index)
+    {
+        return warnaPlanet[Mathf.Clamp(index, 0, warnaPlanet.Length - 1)];
+    }
+
     readonly List<Transform> bintang = new List<Transform>();
     Material matBintang, matMeteor, matPlanet;
     Transform planet;
     float timerMeteor;
     int zonaTerakhir = -1;
 
-    // ====== Membuat objek ini otomatis di scene Gameplay ======
+    // ====== Membuat objek ini otomatis ======
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void DaftarOtomatis()
     {
@@ -55,7 +60,7 @@ public class LuarAngkasa : MonoBehaviour
 
     static void BuatJikaPerlu(Scene scene)
     {
-        if (scene.name == "Gameplay" && FindAnyObjectByType<LuarAngkasa>() == null)
+        if ((scene.name == "Gameplay" || scene.name == "MainMenu") && FindAnyObjectByType<LuarAngkasa>() == null)
         {
             new GameObject("LuarAngkasa").AddComponent<LuarAngkasa>();
         }
@@ -64,13 +69,13 @@ public class LuarAngkasa : MonoBehaviour
     // ====== Siklus ======
     void Start()
     {
-        matBintang = BuatMaterial("Universal Render Pipeline/Unlit", Color.white);
-        matMeteor = BuatMaterial("Universal Render Pipeline/Lit", new Color32(110, 100, 90, 255));
-        matPlanet = BuatMaterial("Universal Render Pipeline/Lit", warnaPlanet[0]);
+        matBintang = BuatMaterial(Color.white);
+        matMeteor = BuatMaterial(new Color32(110, 100, 90, 255));
+        matPlanet = BuatMaterial(warnaPlanet[0]);
 
         BuatBintang();
         BuatPlanet();
-        timerMeteor = 4f; // meteor pertama muncul setelah 4 detik
+        timerMeteor = 4f;
     }
 
     void Update()
@@ -84,12 +89,15 @@ public class LuarAngkasa : MonoBehaviour
                 b.position = PosisiBintangAcak(80f);
         }
 
-        // Munculkan meteor secara berkala
-        timerMeteor -= Time.deltaTime;
-        if (timerMeteor <= 0f)
+        // Meteor hanya muncul saat bermain
+        if (SceneManager.GetActiveScene().name == "Gameplay")
         {
-            BuatMeteor();
-            timerMeteor = Random.Range(jedaMinMeteor, jedaMaksMeteor);
+            timerMeteor -= Time.deltaTime;
+            if (timerMeteor <= 0f)
+            {
+                BuatMeteor();
+                timerMeteor = Random.Range(jedaMinMeteor, jedaMaksMeteor) * Pengaturan.PengaliJedaMeteor;
+            }
         }
 
         // Planet berputar pelan dan warnanya mengikuti zona
@@ -154,19 +162,17 @@ public class LuarAngkasa : MonoBehaviour
         m.transform.localScale = new Vector3(s, s * Random.Range(0.7f, 1f), s * Random.Range(0.8f, 1.1f));
         m.GetComponent<Renderer>().sharedMaterial = matMeteor;
 
-        // Collider dijadikan trigger untuk mendeteksi tabrakan dengan roket
         SphereCollider col = m.GetComponent<SphereCollider>();
         col.isTrigger = true;
         col.radius = 0.4f;
 
         Meteor mt = m.AddComponent<Meteor>();
-        mt.kecepatan = kecepatanMeteor;
+        mt.kecepatan = kecepatanMeteor * Pengaturan.PengaliKecepatan;
     }
 
-    // ====== Utilitas ======
-    Material BuatMaterial(string namaShader, Color warna)
+    Material BuatMaterial(Color warna)
     {
-        Material mat = new Material(Shader.Find(namaShader));
+        Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
         mat.SetColor("_BaseColor", warna);
         return mat;
     }
