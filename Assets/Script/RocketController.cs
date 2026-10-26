@@ -17,7 +17,7 @@ public class RocketController : MonoBehaviour
 
     void Start()
     {
-        target = transform.position;
+               kecepatan = DataRoket.Terpilih.kecepatanGerak;
     }
 
     void Update()

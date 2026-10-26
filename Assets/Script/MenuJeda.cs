@@ -31,8 +31,8 @@ public class MenuJeda : MonoBehaviour
     {
         MenuUtama.SiapkanEventSystem();
 
-        Canvas canvas = FindAnyObjectByType<Canvas>();
-        if (canvas == null) canvas = MenuUtama.BuatCanvas("CanvasJeda");
+        Canvas canvas = MenuUtama.BuatCanvas("CanvasJeda");
+        canvas.sortingOrder = 10; // di atas UI game, di bawah tirai transisi
         Transform root = canvas.transform;
 
         // Tombol Jeda di kanan atas, di bawah tulisan skor

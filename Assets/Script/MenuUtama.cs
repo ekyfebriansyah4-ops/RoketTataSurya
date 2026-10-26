@@ -122,7 +122,7 @@ public class MenuUtama : MonoBehaviour
         // Tombol pilihan tingkat kesulitan (berputar: Mudah -> Normal -> Sulit)
         Vector2 ukuranPengaturan = new Vector2(320, 70);
         Button tombolKesulitan = BuatTombol(root, "Kesulitan: " + Pengaturan.NamaTingkat, Tengah,
-            new Vector2(-170, -410), ukuranPengaturan, Biru, TeksBiruMuda, () => { });
+            new Vector2(0, -410), ukuranPengaturan, Biru, TeksBiruMuda, () => { });
         TextMeshProUGUI labelKesulitan = tombolKesulitan.GetComponentInChildren<TextMeshProUGUI>();
         labelKesulitan.fontSize = 30;
         tombolKesulitan.onClick.AddListener(() =>
@@ -133,13 +133,26 @@ public class MenuUtama : MonoBehaviour
 
         // Tombol suara aktif/mati
         Button tombolSuara = BuatTombol(root, "Suara: " + (Pengaturan.SuaraAktif ? "Aktif" : "Mati"), Tengah,
-            new Vector2(170, -410), ukuranPengaturan, Biru, TeksBiruMuda, () => { });
+            new Vector2(350, -410), ukuranPengaturan, Biru, TeksBiruMuda, () => { });
         TextMeshProUGUI labelSuara = tombolSuara.GetComponentInChildren<TextMeshProUGUI>();
         labelSuara.fontSize = 30;
         tombolSuara.onClick.AddListener(() =>
         {
             Pengaturan.SuaraAktif = !Pengaturan.SuaraAktif;
             labelSuara.text = "Suara: " + (Pengaturan.SuaraAktif ? "Aktif" : "Mati");
+        });
+
+                // Tombol pilih roket (membuka panel pilihan)
+        Button tombolRoket = BuatTombol(root, "Roket: " + DataRoket.Terpilih.nama, Tengah,
+            new Vector2(-350, -410), new Vector2(320, 70), Biru, TeksBiruMuda, () => { });
+        TextMeshProUGUI labelRoket = tombolRoket.GetComponentInChildren<TextMeshProUGUI>();
+        labelRoket.fontSize = 30;
+        GameObject panelRoket = PilihanRoket.BuatPanel(root, nama => labelRoket.text = "Roket: " + nama);
+        panelRoket.SetActive(false);
+        tombolRoket.onClick.AddListener(() =>
+        {
+            panelRoket.SetActive(true);
+            panelRoket.transform.SetAsLastSibling(); // tampil paling atas
         });
 
         BuatTeks(root, "Kelompok 6 - Pemrograman Mobile Lanjut", 24, Bawah, new Vector2(0, 30),

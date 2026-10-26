@@ -1,7 +1,8 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-// Detail roket realistis: material logam, api berpendar, dan lampu mesin. Dibuat otomatis.
+// Detail roket: material logam, api berpendar, lampu mesin.
+// Warna mengikuti roket yang dipilih di menu. Dibuat otomatis.
 public class TampilanRoket : MonoBehaviour
 {
     Transform apiDalam;
@@ -36,42 +37,44 @@ public class TampilanRoket : MonoBehaviour
             return;
         }
         Transform r = roket.transform;
+        JenisRoket jenis = DataRoket.Terpilih;
 
-        Material logamPutih = Visual.Lit(new Color(0.92f, 0.93f, 0.95f), 0.6f, 0.85f);
-        Material logamMerah = Visual.Lit(new Color32(200, 55, 50, 255), 0.4f, 0.7f);
+        Material logamBadan = Visual.Lit(jenis.badan, 0.6f, 0.85f);
+        Material logamAksen = Visual.Lit(jenis.aksen, 0.4f, 0.7f);
         Material logamGelap = Visual.Lit(new Color32(45, 45, 48, 255), 0.9f, 0.6f);
         Material kaca = Visual.Lit(new Color32(90, 150, 220, 255), 0.9f, 0.95f);
-        Material apiOranye = Visual.Bercahaya(new Color32(255, 120, 30, 255), 4f);
-        Material apiKuning = Visual.Bercahaya(new Color32(255, 220, 120, 255), 6f);
+        Color warnaApi = jenis.api;
+        Material apiLuarMat = Visual.Bercahaya(warnaApi, 4f);
+        Material apiDalamMat = Visual.Bercahaya(Color.Lerp(warnaApi, Color.white, 0.5f), 6f);
 
-        // Ganti material bagian yang sudah ada dengan material logam
-        GantiMaterial(r, "Badan", logamPutih);
-        GantiMaterial(r, "SayapKiri", logamMerah);
-        GantiMaterial(r, "SayapKanan", logamMerah);
+        // Ganti material bagian yang sudah ada
+        GantiMaterial(r, "Badan", logamBadan);
+        GantiMaterial(r, "SayapKiri", logamAksen);
+        GantiMaterial(r, "SayapKanan", logamAksen);
 
         // Bagian tambahan
         BuatBagian(r, PrimitiveType.Sphere, "Hidung", new Vector3(0f, 0f, 0.75f), Vector3.zero,
-            new Vector3(0.42f, 0.42f, 0.55f), logamMerah);
+            new Vector3(0.42f, 0.42f, 0.55f), logamAksen);
         BuatBagian(r, PrimitiveType.Sphere, "Jendela", new Vector3(0f, 0.2f, 0.25f), Vector3.zero,
             new Vector3(0.22f, 0.22f, 0.22f), kaca);
         BuatBagian(r, PrimitiveType.Cube, "SiripAtas", new Vector3(0f, 0.32f, -0.45f), Vector3.zero,
-            new Vector3(0.06f, 0.35f, 0.35f), logamMerah);
+            new Vector3(0.06f, 0.35f, 0.35f), logamAksen);
         BuatBagian(r, PrimitiveType.Cylinder, "Mesin", new Vector3(0f, 0f, -0.82f), new Vector3(90f, 0f, 0f),
             new Vector3(0.34f, 0.08f, 0.34f), logamGelap);
 
-        // Api berpendar (ditangkap efek bloom)
+        // Api berpendar
         apiLuar = BuatBagian(r, PrimitiveType.Sphere, "ApiLuar", new Vector3(0f, 0f, -0.95f), Vector3.zero,
-            new Vector3(0.32f, 0.32f, 0.35f), apiOranye);
+            new Vector3(0.32f, 0.32f, 0.35f), apiLuarMat);
         apiDalam = BuatBagian(r, PrimitiveType.Sphere, "ApiDalam", new Vector3(0f, 0f, -1.05f), Vector3.zero,
-            new Vector3(0.2f, 0.2f, 0.6f), apiKuning);
+            new Vector3(0.2f, 0.2f, 0.6f), apiDalamMat);
 
-        // Lampu sungguhan dari mesin yang menerangi roket
+        // Lampu mesin, warnanya sesuai warna api
         GameObject g = new GameObject("LampuMesin");
         g.transform.SetParent(r, false);
         g.transform.localPosition = new Vector3(0f, 0f, -1.2f);
         lampuMesin = g.AddComponent<Light>();
         lampuMesin.type = LightType.Point;
-        lampuMesin.color = new Color32(255, 140, 50, 255);
+        lampuMesin.color = warnaApi;
         lampuMesin.range = 5f;
         lampuMesin.intensity = 2.5f;
     }
@@ -80,7 +83,6 @@ public class TampilanRoket : MonoBehaviour
     {
         if (apiDalam == null || apiLuar == null) return;
 
-        // Api dan lampu berkedip dengan pola acak yang halus
         float f = 0.85f + 0.3f * Mathf.PerlinNoise(Time.time * 15f, 0f);
         apiDalam.localScale = new Vector3(0.2f, 0.2f, 0.6f * f);
         apiLuar.localScale = new Vector3(0.32f * f, 0.32f * f, 0.35f);
@@ -98,7 +100,7 @@ public class TampilanRoket : MonoBehaviour
     {
         GameObject g = GameObject.CreatePrimitive(bentuk);
         g.name = nama;
-        Destroy(g.GetComponent<Collider>()); // hanya hiasan
+        Destroy(g.GetComponent<Collider>());
         g.transform.SetParent(induk, false);
         g.transform.localPosition = posisi;
         g.transform.localEulerAngles = rotasi;
